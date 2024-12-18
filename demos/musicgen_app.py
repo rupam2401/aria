@@ -174,7 +174,7 @@ def _do_predictions(texts, melodies, duration, progress=False, gradio_progress=N
 def predict_batched(texts, melodies):
     max_text_length = 512
     texts = [text[:max_text_length] for text in texts]
-    load_model('facebook/musicgen-stereo-melody')
+    load_model('facebook/musicgen-melody')
     res = _do_predictions(texts, melodies, BATCHED_DURATION)
     return res
 
@@ -245,10 +245,9 @@ def ui_full(launch_kwargs):
     with gr.Blocks() as interface:
         gr.Markdown(
             """
-            # MusicGen
-            This is your private demo for [MusicGen](https://github.com/facebookresearch/audiocraft),
+            # AriaForge
+            This is your private demo for AriaForge,
             a simple and controllable model for music generation
-            presented at: ["Simple and Controllable Music Generation"](https://huggingface.co/papers/2306.05284)
             """
         )
         with gr.Row():
@@ -265,23 +264,25 @@ def ui_full(launch_kwargs):
                     # Adapted from https://github.com/rkfg/audiocraft/blob/long/app.py, MIT license.
                     _ = gr.Button("Interrupt").click(fn=interrupt, queue=False)
                 with gr.Row():
-                    model = gr.Radio(["facebook/musicgen-melody", "facebook/musicgen-medium", "facebook/musicgen-small",
-                                      "facebook/musicgen-large", "facebook/musicgen-melody-large",
-                                      "facebook/musicgen-stereo-small", "facebook/musicgen-stereo-medium",
-                                      "facebook/musicgen-stereo-melody", "facebook/musicgen-stereo-large",
-                                      "facebook/musicgen-stereo-melody-large"],
-                                     label="Model", value="facebook/musicgen-stereo-melody", interactive=True)
-                    model_path = gr.Text(label="Model Path (custom models)")
+                    model = gr.Radio(
+                        [("ariaforge/melody", "facebook/musicgen-melody"), ("ariaforge/v2.1 (large)", "facebook/musicgen-medium"), ("ariaforge/v1.8 (small)", "facebook/musicgen-small")],
+                        # ["facebook/musicgen-melody", "facebook/musicgen-medium", "facebook/musicgen-small",
+                        #               "facebook/musicgen-large", "facebook/musicgen-melody-large",
+                        #               "facebook/musicgen-stereo-small", "facebook/musicgen-stereo-medium",
+                        #               "facebook/musicgen-stereo-melody", "facebook/musicgen-stereo-large",
+                        #               "facebook/musicgen-stereo-melody-large"],
+                                     label="Model", value="facebook/musicgen-melody", interactive=True)
+                    model_path = gr.Text(label="Model Path (custom models)", interactive=False)
                 with gr.Row():
                     decoder = gr.Radio(["Default", "MultiBand_Diffusion"],
-                                       label="Decoder", value="Default", interactive=True)
+                                       label="Decoder", value="Default", interactive=False)
                 with gr.Row():
-                    duration = gr.Slider(minimum=1, maximum=120, value=10, label="Duration", interactive=True)
+                    duration = gr.Slider(minimum=1, maximum=60, value=10, label="Duration", interactive=True)
                 with gr.Row():
-                    topk = gr.Number(label="Top-k", value=250, interactive=True)
-                    topp = gr.Number(label="Top-p", value=0, interactive=True)
-                    temperature = gr.Number(label="Temperature", value=1.0, interactive=True)
-                    cfg_coef = gr.Number(label="Classifier Free Guidance", value=3.0, interactive=True)
+                    topk = gr.Number(label="Top-k", value=250, interactive=False)
+                    topp = gr.Number(label="Top-p", value=0, interactive=False)
+                    temperature = gr.Number(label="Temperature", value=1.0, interactive=False)
+                    cfg_coef = gr.Number(label="Classifier Free Guidance", value=3.0, interactive=False)
             with gr.Column():
                 output = gr.Video(label="Generated Music")
                 audio_output = gr.Audio(label="Generated Music (wav)", type='filepath')
@@ -299,37 +300,37 @@ def ui_full(launch_kwargs):
                 [
                     "An 80s driving pop song with heavy drums and synth pads in the background",
                     "./assets/bach.mp3",
-                    "facebook/musicgen-stereo-melody",
+                    "facebook/musicgen-melody",
                     "Default"
                 ],
                 [
                     "A cheerful country song with acoustic guitars",
                     "./assets/bolero_ravel.mp3",
-                    "facebook/musicgen-stereo-melody",
+                    "facebook/musicgen-melody",
                     "Default"
                 ],
                 [
                     "90s rock song with electric guitar and heavy drums",
                     None,
-                    "facebook/musicgen-stereo-medium",
+                    "facebook/musicgen-medium",
                     "Default"
                 ],
                 [
                     "a light and cheerly EDM track, with syncopated drums, aery pads, and strong emotions",
                     "./assets/bach.mp3",
-                    "facebook/musicgen-stereo-melody",
+                    "facebook/musicgen-melody",
                     "Default"
                 ],
                 [
                     "lofi slow bpm electro chill with organic samples",
                     None,
-                    "facebook/musicgen-stereo-medium",
+                    "facebook/musicgen-medium",
                     "Default"
                 ],
                 [
                     "Punk rock with loud drum and power guitar",
                     None,
-                    "facebook/musicgen-stereo-medium",
+                    "facebook/musicgen-medium",
                     "MultiBand_Diffusion"
                 ],
             ],
@@ -347,7 +348,7 @@ def ui_full(launch_kwargs):
             should include some level of details on the instruments present, along with some intended use case
             (e.g. adding "perfect for a commercial" can somehow help).
 
-            Using one of the `melody` model (e.g. `musicgen-melody-*`), you can optionally provide a reference audio
+            Using one of the `melody` model (e.g. `ariaforge/melody`), you can optionally provide a reference audio
             from which a broad melody will be extracted.
             The model will then try to follow both the description and melody provided.
             For best results, the melody should be 30 seconds long (I know, the samples we provide are not...)
@@ -360,14 +361,12 @@ def ui_full(launch_kwargs):
             An overlap of 12 seconds is kept with the previously generated chunk, and 18 "new" seconds
             are generated each time.
 
-            We present 10 model variations:
-            1. facebook/musicgen-melody -- a music generation model capable of generating music condition
+            We present 3 model variations:
+            1. ariaforge/melody -- a music generation model capable of generating music condition
                 on text and melody inputs. **Note**, you can also use text only.
-            2. facebook/musicgen-small -- a 300M transformer decoder conditioned on text only.
-            3. facebook/musicgen-medium -- a 1.5B transformer decoder conditioned on text only.
-            4. facebook/musicgen-large -- a 3.3B transformer decoder conditioned on text only.
-            5. facebook/musicgen-melody-large -- a 3.3B transformer decoder conditioned on and melody.
-            6. facebook/musicgen-stereo-*: same as the previous models but fine tuned to output stereo audio.
+            2. ariaforge/v2.1 (large) -- a 300M transformer decoder conditioned on text only.
+            3. ariaforge/v1.6 (small) -- a 1.5B transformer decoder conditioned on text only.
+
 
             We also present two way of decoding the audio tokens
             1. Use the default GAN based compression model. It can suffer from artifacts especially
@@ -376,8 +375,6 @@ def ui_full(launch_kwargs):
                 at an extra computational cost. When this is selected, we provide both the GAN based decoded
                 audio, and the one obtained with MBD.
 
-            See [github.com/facebookresearch/audiocraft](https://github.com/facebookresearch/audiocraft/blob/main/docs/MUSICGEN.md)
-            for more details.
             """
         )
 
